@@ -1,0 +1,596 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="age">age</option>
+                                
+                                    <option value="pre_bmi">pre_bmi</option>
+                                
+                                    <option value="pre_cholesterol">pre_cholesterol</option>
+                                
+                                    <option value="pre_creatinine">pre_creatinine</option>
+                                
+                                    <option value="pre_dbp">pre_dbp</option>
+                                
+                                    <option value="pre_sbp">pre_sbp</option>
+                                
+                                    <option value="pre_uac">pre_uac</option>
+                                
+                                    <option value="pre_hba1c">pre_hba1c</option>
+                                
+                                    <option value="pre_egfr">pre_egfr</option>
+                                
+                                    <option value="preT_basal_insulin">preT_basal_insulin</option>
+                                
+                                    <option value="preT_bd_insulin">preT_bd_insulin</option>
+                                
+                                    <option value="preT_dpp4">preT_dpp4</option>
+                                
+                                    <option value="preT_glp1">preT_glp1</option>
+                                
+                                    <option value="preT_metformin">preT_metformin</option>
+                                
+                                    <option value="preT_placebo">preT_placebo</option>
+                                
+                                    <option value="preT_prandial_insulin">preT_prandial_insulin</option>
+                                
+                                    <option value="preT_sglt2">preT_sglt2</option>
+                                
+                                    <option value="preT_su">preT_su</option>
+                                
+                                    <option value="preT_tzd">preT_tzd</option>
+                                
+                                    <option value="drug_basal_insulin">drug_basal_insulin</option>
+                                
+                                    <option value="drug_bd_insulin">drug_bd_insulin</option>
+                                
+                                    <option value="drug_dpp4">drug_dpp4</option>
+                                
+                                    <option value="drug_glp1">drug_glp1</option>
+                                
+                                    <option value="drug_metformin">drug_metformin</option>
+                                
+                                    <option value="drug_placebo">drug_placebo</option>
+                                
+                                    <option value="drug_prandial_insulin">drug_prandial_insulin</option>
+                                
+                                    <option value="drug_sglt2">drug_sglt2</option>
+                                
+                                    <option value="drug_su">drug_su</option>
+                                
+                                    <option value="drug_tzd">drug_tzd</option>
+                                
+                                    <option value="post_bmi">post_bmi</option>
+                                
+                                    <option value="post_cholesterol">post_cholesterol</option>
+                                
+                                    <option value="post_creatinine">post_creatinine</option>
+                                
+                                    <option value="post_dbp">post_dbp</option>
+                                
+                                    <option value="post_sbp">post_sbp</option>
+                                
+                                    <option value="post_uac">post_uac</option>
+                                
+                                    <option value="post_hba1c">post_hba1c</option>
+                                
+                                    <option value="post_egfr">post_egfr</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "lightgreen", "id": "age", "label": "age", "shape": "dot"}, {"color": "lightsteelblue", "id": "pre_bmi", "label": "pre_bmi", "shape": "dot"}, {"color": "lightsteelblue", "id": "pre_cholesterol", "label": "pre_cholesterol", "shape": "dot"}, {"color": "lightsteelblue", "id": "pre_creatinine", "label": "pre_creatinine", "shape": "dot"}, {"color": "lightsteelblue", "id": "pre_dbp", "label": "pre_dbp", "shape": "dot"}, {"color": "lightsteelblue", "id": "pre_sbp", "label": "pre_sbp", "shape": "dot"}, {"color": "lightsteelblue", "id": "pre_uac", "label": "pre_uac", "shape": "dot"}, {"color": "lightsteelblue", "id": "pre_hba1c", "label": "pre_hba1c", "shape": "dot"}, {"color": "lightsteelblue", "id": "pre_egfr", "label": "pre_egfr", "shape": "dot"}, {"color": "lightsteelblue", "id": "preT_basal_insulin", "label": "preT_basal_insulin", "shape": "dot"}, {"color": "lightsteelblue", "id": "preT_bd_insulin", "label": "preT_bd_insulin", "shape": "dot"}, {"color": "lightsteelblue", "id": "preT_dpp4", "label": "preT_dpp4", "shape": "dot"}, {"color": "lightsteelblue", "id": "preT_glp1", "label": "preT_glp1", "shape": "dot"}, {"color": "lightsteelblue", "id": "preT_metformin", "label": "preT_metformin", "shape": "dot"}, {"color": "lightsteelblue", "id": "preT_placebo", "label": "preT_placebo", "shape": "dot"}, {"color": "lightsteelblue", "id": "preT_prandial_insulin", "label": "preT_prandial_insulin", "shape": "dot"}, {"color": "lightsteelblue", "id": "preT_sglt2", "label": "preT_sglt2", "shape": "dot"}, {"color": "lightsteelblue", "id": "preT_su", "label": "preT_su", "shape": "dot"}, {"color": "lightsteelblue", "id": "preT_tzd", "label": "preT_tzd", "shape": "dot"}, {"color": "dodgerblue", "id": "drug_basal_insulin", "label": "drug_basal_insulin", "shape": "dot"}, {"color": "dodgerblue", "id": "drug_bd_insulin", "label": "drug_bd_insulin", "shape": "dot"}, {"color": "dodgerblue", "id": "drug_dpp4", "label": "drug_dpp4", "shape": "dot"}, {"color": "dodgerblue", "id": "drug_glp1", "label": "drug_glp1", "shape": "dot"}, {"color": "dodgerblue", "id": "drug_metformin", "label": "drug_metformin", "shape": "dot"}, {"color": "dodgerblue", "id": "drug_placebo", "label": "drug_placebo", "shape": "dot"}, {"color": "dodgerblue", "id": "drug_prandial_insulin", "label": "drug_prandial_insulin", "shape": "dot"}, {"color": "dodgerblue", "id": "drug_sglt2", "label": "drug_sglt2", "shape": "dot"}, {"color": "dodgerblue", "id": "drug_su", "label": "drug_su", "shape": "dot"}, {"color": "dodgerblue", "id": "drug_tzd", "label": "drug_tzd", "shape": "dot"}, {"color": "orangered", "id": "post_bmi", "label": "post_bmi", "shape": "dot"}, {"color": "orangered", "id": "post_cholesterol", "label": "post_cholesterol", "shape": "dot"}, {"color": "orangered", "id": "post_creatinine", "label": "post_creatinine", "shape": "dot"}, {"color": "orangered", "id": "post_dbp", "label": "post_dbp", "shape": "dot"}, {"color": "orangered", "id": "post_sbp", "label": "post_sbp", "shape": "dot"}, {"color": "orangered", "id": "post_uac", "label": "post_uac", "shape": "dot"}, {"color": "orangered", "id": "post_hba1c", "label": "post_hba1c", "shape": "dot"}, {"color": "orangered", "id": "post_egfr", "label": "post_egfr", "shape": "dot"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "age", "title": "0.33", "to": "drug_basal_insulin", "width": 0.33}, {"arrows": "to", "from": "age", "title": "0.26", "to": "drug_bd_insulin", "width": 0.26}, {"arrows": "to", "from": "age", "title": "0.31", "to": "drug_dpp4", "width": 0.31}, {"arrows": "to", "from": "age", "title": "0.27", "to": "drug_glp1", "width": 0.27}, {"arrows": "to", "from": "age", "title": "0.3", "to": "drug_metformin", "width": 0.3}, {"arrows": "to", "from": "age", "title": "0.3", "to": "drug_placebo", "width": 0.3}, {"arrows": "to", "from": "age", "title": "0.32", "to": "drug_prandial_insulin", "width": 0.32}, {"arrows": "to", "from": "age", "title": "0.32", "to": "drug_sglt2", "width": 0.32}, {"arrows": "to", "from": "age", "title": "0.33", "to": "drug_su", "width": 0.33}, {"arrows": "to", "from": "age", "title": "0.29", "to": "drug_tzd", "width": 0.29}, {"arrows": "to", "from": "age", "title": "0.56", "to": "post_bmi", "width": 0.56}, {"arrows": "to", "from": "age", "title": "0.33", "to": "post_cholesterol", "width": 0.33}, {"arrows": "to", "from": "age", "title": "0.32", "to": "post_creatinine", "width": 0.32}, {"arrows": "to", "from": "age", "title": "0.57", "to": "post_dbp", "width": 0.57}, {"arrows": "to", "from": "age", "title": "0.56", "to": "post_sbp", "width": 0.56}, {"arrows": "to", "from": "age", "title": "0.4", "to": "post_uac", "width": 0.4}, {"arrows": "to", "from": "age", "title": "0.62", "to": "post_hba1c", "width": 0.62}, {"arrows": "to", "from": "age", "title": "0.8", "to": "post_egfr", "width": 0.8}, {"arrows": "to", "from": "pre_bmi", "title": "0.24", "to": "drug_basal_insulin", "width": 0.24}, {"arrows": "to", "from": "pre_bmi", "title": "0.27", "to": "drug_bd_insulin", "width": 0.27}, {"arrows": "to", "from": "pre_bmi", "title": "0.34", "to": "drug_dpp4", "width": 0.34}, {"arrows": "to", "from": "pre_bmi", "title": "0.35", "to": "drug_glp1", "width": 0.35}, {"arrows": "to", "from": "pre_bmi", "title": "0.35", "to": "drug_metformin", "width": 0.35}, {"arrows": "to", "from": "pre_bmi", "title": "0.31", "to": "drug_placebo", "width": 0.31}, {"arrows": "to", "from": "pre_bmi", "title": "0.31", "to": "drug_prandial_insulin", "width": 0.31}, {"arrows": "to", "from": "pre_bmi", "title": "0.34", "to": "drug_sglt2", "width": 0.34}, {"arrows": "to", "from": "pre_bmi", "title": "0.38", "to": "drug_su", "width": 0.38}, {"arrows": "to", "from": "pre_bmi", "title": "0.33", "to": "drug_tzd", "width": 0.33}, {"arrows": "to", "from": "pre_bmi", "title": "1.27", "to": "post_bmi", "width": 1.27}, {"arrows": "to", "from": "pre_bmi", "title": "0.34", "to": "post_cholesterol", "width": 0.34}, {"arrows": "to", "from": "pre_bmi", "title": "0.36", "to": "post_creatinine", "width": 0.36}, {"arrows": "to", "from": "pre_bmi", "title": "0.61", "to": "post_dbp", "width": 0.61}, {"arrows": "to", "from": "pre_bmi", "title": "0.62", "to": "post_sbp", "width": 0.62}, {"arrows": "to", "from": "pre_bmi", "title": "0.69", "to": "post_uac", "width": 0.69}, {"arrows": "to", "from": "pre_bmi", "title": "0.5", "to": "post_hba1c", "width": 0.5}, {"arrows": "to", "from": "pre_bmi", "title": "1.25", "to": "post_egfr", "width": 1.25}, {"arrows": "to", "from": "pre_cholesterol", "title": "0.41", "to": "drug_basal_insulin", "width": 0.41}, {"arrows": "to", "from": "pre_cholesterol", "title": "0.36", "to": "drug_bd_insulin", "width": 0.36}, {"arrows": "to", "from": "pre_cholesterol", "title": "0.39", "to": "drug_dpp4", "width": 0.39}, {"arrows": "to", "from": "pre_cholesterol", "title": "0.42", "to": "drug_glp1", "width": 0.42}, {"arrows": "to", "from": "pre_cholesterol", "title": "0.59", "to": "drug_metformin", "width": 0.59}, {"arrows": "to", "from": "pre_cholesterol", "title": "0.34", "to": "drug_placebo", "width": 0.34}, {"arrows": "to", "from": "pre_cholesterol", "title": "0.35", "to": "drug_prandial_insulin", "width": 0.35}, {"arrows": "to", "from": "pre_cholesterol", "title": "0.47", "to": "drug_sglt2", "width": 0.47}, {"arrows": "to", "from": "pre_cholesterol", "title": "0.38", "to": "drug_su", "width": 0.38}, {"arrows": "to", "from": "pre_cholesterol", "title": "0.37", "to": "drug_tzd", "width": 0.37}, {"arrows": "to", "from": "pre_cholesterol", "title": "0.54", "to": "post_bmi", "width": 0.54}, {"arrows": "to", "from": "pre_cholesterol", "title": "1.67", "to": "post_cholesterol", "width": 1.67}, {"arrows": "to", "from": "pre_cholesterol", "title": "1.07", "to": "post_creatinine", "width": 1.07}, {"arrows": "to", "from": "pre_cholesterol", "title": "1.1", "to": "post_dbp", "width": 1.1}, {"arrows": "to", "from": "pre_cholesterol", "title": "0.9", "to": "post_sbp", "width": 0.9}, {"arrows": "to", "from": "pre_cholesterol", "title": "1.95", "to": "post_uac", "width": 1.95}, {"arrows": "to", "from": "pre_cholesterol", "title": "2.2", "to": "post_hba1c", "width": 2.2}, {"arrows": "to", "from": "pre_cholesterol", "title": "2.45", "to": "post_egfr", "width": 2.45}, {"arrows": "to", "from": "pre_creatinine", "title": "0.23", "to": "drug_basal_insulin", "width": 0.23}, {"arrows": "to", "from": "pre_creatinine", "title": "0.31", "to": "drug_bd_insulin", "width": 0.31}, {"arrows": "to", "from": "pre_creatinine", "title": "0.22", "to": "drug_dpp4", "width": 0.22}, {"arrows": "to", "from": "pre_creatinine", "title": "0.34", "to": "drug_glp1", "width": 0.34}, {"arrows": "to", "from": "pre_creatinine", "title": "0.28", "to": "drug_metformin", "width": 0.28}, {"arrows": "to", "from": "pre_creatinine", "title": "0.32", "to": "drug_placebo", "width": 0.32}, {"arrows": "to", "from": "pre_creatinine", "title": "0.29", "to": "drug_prandial_insulin", "width": 0.29}, {"arrows": "to", "from": "pre_creatinine", "title": "0.29", "to": "drug_sglt2", "width": 0.29}, {"arrows": "to", "from": "pre_creatinine", "title": "0.36", "to": "drug_su", "width": 0.36}, {"arrows": "to", "from": "pre_creatinine", "title": "0.28", "to": "drug_tzd", "width": 0.28}, {"arrows": "to", "from": "pre_creatinine", "title": "0.23", "to": "post_bmi", "width": 0.23}, {"arrows": "to", "from": "pre_creatinine", "title": "0.23", "to": "post_cholesterol", "width": 0.23}, {"arrows": "to", "from": "pre_creatinine", "title": "0.5", "to": "post_creatinine", "width": 0.5}, {"arrows": "to", "from": "pre_creatinine", "title": "0.34", "to": "post_dbp", "width": 0.34}, {"arrows": "to", "from": "pre_creatinine", "title": "0.35", "to": "post_sbp", "width": 0.35}, {"arrows": "to", "from": "pre_creatinine", "title": "0.36", "to": "post_uac", "width": 0.36}, {"arrows": "to", "from": "pre_creatinine", "title": "0.27", "to": "post_hba1c", "width": 0.27}, {"arrows": "to", "from": "pre_creatinine", "title": "0.76", "to": "post_egfr", "width": 0.76}, {"arrows": "to", "from": "pre_dbp", "title": "0.29", "to": "drug_basal_insulin", "width": 0.29}, {"arrows": "to", "from": "pre_dbp", "title": "0.3", "to": "drug_bd_insulin", "width": 0.3}, {"arrows": "to", "from": "pre_dbp", "title": "0.24", "to": "drug_dpp4", "width": 0.24}, {"arrows": "to", "from": "pre_dbp", "title": "0.38", "to": "drug_glp1", "width": 0.38}, {"arrows": "to", "from": "pre_dbp", "title": "0.31", "to": "drug_metformin", "width": 0.31}, {"arrows": "to", "from": "pre_dbp", "title": "0.36", "to": "drug_placebo", "width": 0.36}, {"arrows": "to", "from": "pre_dbp", "title": "0.26", "to": "drug_prandial_insulin", "width": 0.26}, {"arrows": "to", "from": "pre_dbp", "title": "0.34", "to": "drug_sglt2", "width": 0.34}, {"arrows": "to", "from": "pre_dbp", "title": "0.24", "to": "drug_su", "width": 0.24}, {"arrows": "to", "from": "pre_dbp", "title": "0.44", "to": "drug_tzd", "width": 0.44}, {"arrows": "to", "from": "pre_dbp", "title": "0.32", "to": "post_bmi", "width": 0.32}, {"arrows": "to", "from": "pre_dbp", "title": "0.34", "to": "post_cholesterol", "width": 0.34}, {"arrows": "to", "from": "pre_dbp", "title": "0.3", "to": "post_creatinine", "width": 0.3}, {"arrows": "to", "from": "pre_dbp", "title": "0.55", "to": "post_dbp", "width": 0.55}, {"arrows": "to", "from": "pre_dbp", "title": "0.43", "to": "post_sbp", "width": 0.43}, {"arrows": "to", "from": "pre_dbp", "title": "0.7", "to": "post_uac", "width": 0.7}, {"arrows": "to", "from": "pre_dbp", "title": "0.45", "to": "post_hba1c", "width": 0.45}, {"arrows": "to", "from": "pre_dbp", "title": "0.75", "to": "post_egfr", "width": 0.75}, {"arrows": "to", "from": "pre_sbp", "title": "0.24", "to": "drug_basal_insulin", "width": 0.24}, {"arrows": "to", "from": "pre_sbp", "title": "0.26", "to": "drug_bd_insulin", "width": 0.26}, {"arrows": "to", "from": "pre_sbp", "title": "0.39", "to": "drug_dpp4", "width": 0.39}, {"arrows": "to", "from": "pre_sbp", "title": "0.34", "to": "drug_glp1", "width": 0.34}, {"arrows": "to", "from": "pre_sbp", "title": "0.29", "to": "drug_metformin", "width": 0.29}, {"arrows": "to", "from": "pre_sbp", "title": "0.29", "to": "drug_placebo", "width": 0.29}, {"arrows": "to", "from": "pre_sbp", "title": "0.27", "to": "drug_prandial_insulin", "width": 0.27}, {"arrows": "to", "from": "pre_sbp", "title": "0.33", "to": "drug_sglt2", "width": 0.33}, {"arrows": "to", "from": "pre_sbp", "title": "0.27", "to": "drug_su", "width": 0.27}, {"arrows": "to", "from": "pre_sbp", "title": "0.37", "to": "drug_tzd", "width": 0.37}, {"arrows": "to", "from": "pre_sbp", "title": "0.35", "to": "post_bmi", "width": 0.35}, {"arrows": "to", "from": "pre_sbp", "title": "0.28", "to": "post_cholesterol", "width": 0.28}, {"arrows": "to", "from": "pre_sbp", "title": "0.26", "to": "post_creatinine", "width": 0.26}, {"arrows": "to", "from": "pre_sbp", "title": "0.43", "to": "post_dbp", "width": 0.43}, {"arrows": "to", "from": "pre_sbp", "title": "0.46", "to": "post_sbp", "width": 0.46}, {"arrows": "to", "from": "pre_sbp", "title": "0.37", "to": "post_uac", "width": 0.37}, {"arrows": "to", "from": "pre_sbp", "title": "0.4", "to": "post_hba1c", "width": 0.4}, {"arrows": "to", "from": "pre_sbp", "title": "0.48", "to": "post_egfr", "width": 0.48}, {"arrows": "to", "from": "pre_uac", "title": "0.38", "to": "drug_basal_insulin", "width": 0.38}, {"arrows": "to", "from": "pre_uac", "title": "0.35", "to": "drug_bd_insulin", "width": 0.35}, {"arrows": "to", "from": "pre_uac", "title": "0.44", "to": "drug_dpp4", "width": 0.44}, {"arrows": "to", "from": "pre_uac", "title": "0.39", "to": "drug_glp1", "width": 0.39}, {"arrows": "to", "from": "pre_uac", "title": "0.35", "to": "drug_metformin", "width": 0.35}, {"arrows": "to", "from": "pre_uac", "title": "0.29", "to": "drug_placebo", "width": 0.29}, {"arrows": "to", "from": "pre_uac", "title": "0.26", "to": "drug_prandial_insulin", "width": 0.26}, {"arrows": "to", "from": "pre_uac", "title": "0.38", "to": "drug_sglt2", "width": 0.38}, {"arrows": "to", "from": "pre_uac", "title": "0.31", "to": "drug_su", "width": 0.31}, {"arrows": "to", "from": "pre_uac", "title": "0.31", "to": "drug_tzd", "width": 0.31}, {"arrows": "to", "from": "pre_uac", "title": "0.29", "to": "post_bmi", "width": 0.29}, {"arrows": "to", "from": "pre_uac", "title": "0.28", "to": "post_cholesterol", "width": 0.28}, {"arrows": "to", "from": "pre_uac", "title": "0.31", "to": "post_creatinine", "width": 0.31}, {"arrows": "to", "from": "pre_uac", "title": "0.5", "to": "post_dbp", "width": 0.5}, {"arrows": "to", "from": "pre_uac", "title": "0.58", "to": "post_sbp", "width": 0.58}, {"arrows": "to", "from": "pre_uac", "title": "1.37", "to": "post_uac", "width": 1.37}, {"arrows": "to", "from": "pre_uac", "title": "0.5", "to": "post_hba1c", "width": 0.5}, {"arrows": "to", "from": "pre_uac", "title": "0.44", "to": "post_egfr", "width": 0.44}, {"arrows": "to", "from": "pre_hba1c", "title": "0.28", "to": "drug_basal_insulin", "width": 0.28}, {"arrows": "to", "from": "pre_hba1c", "title": "0.34", "to": "drug_bd_insulin", "width": 0.34}, {"arrows": "to", "from": "pre_hba1c", "title": "0.33", "to": "drug_dpp4", "width": 0.33}, {"arrows": "to", "from": "pre_hba1c", "title": "0.28", "to": "drug_glp1", "width": 0.28}, {"arrows": "to", "from": "pre_hba1c", "title": "0.36", "to": "drug_metformin", "width": 0.36}, {"arrows": "to", "from": "pre_hba1c", "title": "0.32", "to": "drug_placebo", "width": 0.32}, {"arrows": "to", "from": "pre_hba1c", "title": "0.31", "to": "drug_prandial_insulin", "width": 0.31}, {"arrows": "to", "from": "pre_hba1c", "title": "0.27", "to": "drug_sglt2", "width": 0.27}, {"arrows": "to", "from": "pre_hba1c", "title": "0.34", "to": "drug_su", "width": 0.34}, {"arrows": "to", "from": "pre_hba1c", "title": "0.29", "to": "drug_tzd", "width": 0.29}, {"arrows": "to", "from": "pre_hba1c", "title": "0.19", "to": "post_bmi", "width": 0.19}, {"arrows": "to", "from": "pre_hba1c", "title": "0.33", "to": "post_cholesterol", "width": 0.33}, {"arrows": "to", "from": "pre_hba1c", "title": "0.29", "to": "post_creatinine", "width": 0.29}, {"arrows": "to", "from": "pre_hba1c", "title": "0.92", "to": "post_dbp", "width": 0.92}, {"arrows": "to", "from": "pre_hba1c", "title": "0.46", "to": "post_sbp", "width": 0.46}, {"arrows": "to", "from": "pre_hba1c", "title": "0.42", "to": "post_uac", "width": 0.42}, {"arrows": "to", "from": "pre_hba1c", "title": "0.45", "to": "post_hba1c", "width": 0.45}, {"arrows": "to", "from": "pre_hba1c", "title": "0.5", "to": "post_egfr", "width": 0.5}, {"arrows": "to", "from": "pre_egfr", "title": "0.23", "to": "drug_basal_insulin", "width": 0.23}, {"arrows": "to", "from": "pre_egfr", "title": "0.22", "to": "drug_bd_insulin", "width": 0.22}, {"arrows": "to", "from": "pre_egfr", "title": "0.28", "to": "drug_dpp4", "width": 0.28}, {"arrows": "to", "from": "pre_egfr", "title": "0.32", "to": "drug_glp1", "width": 0.32}, {"arrows": "to", "from": "pre_egfr", "title": "0.37", "to": "drug_metformin", "width": 0.37}, {"arrows": "to", "from": "pre_egfr", "title": "0.23", "to": "drug_placebo", "width": 0.23}, {"arrows": "to", "from": "pre_egfr", "title": "0.31", "to": "drug_prandial_insulin", "width": 0.31}, {"arrows": "to", "from": "pre_egfr", "title": "0.31", "to": "drug_sglt2", "width": 0.31}, {"arrows": "to", "from": "pre_egfr", "title": "0.35", "to": "drug_su", "width": 0.35}, {"arrows": "to", "from": "pre_egfr", "title": "0.33", "to": "drug_tzd", "width": 0.33}, {"arrows": "to", "from": "pre_egfr", "title": "0.81", "to": "post_bmi", "width": 0.81}, {"arrows": "to", "from": "pre_egfr", "title": "0.39", "to": "post_cholesterol", "width": 0.39}, {"arrows": "to", "from": "pre_egfr", "title": "0.83", "to": "post_creatinine", "width": 0.83}, {"arrows": "to", "from": "pre_egfr", "title": "0.76", "to": "post_dbp", "width": 0.76}, {"arrows": "to", "from": "pre_egfr", "title": "1.14", "to": "post_sbp", "width": 1.14}, {"arrows": "to", "from": "pre_egfr", "title": "0.66", "to": "post_uac", "width": 0.66}, {"arrows": "to", "from": "pre_egfr", "title": "0.6", "to": "post_hba1c", "width": 0.6}, {"arrows": "to", "from": "pre_egfr", "title": "2.22", "to": "post_egfr", "width": 2.22}, {"arrows": "to", "from": "preT_basal_insulin", "title": "0.42", "to": "drug_basal_insulin", "width": 0.42}, {"arrows": "to", "from": "preT_basal_insulin", "title": "0.38", "to": "drug_bd_insulin", "width": 0.38}, {"arrows": "to", "from": "preT_basal_insulin", "title": "0.43", "to": "drug_dpp4", "width": 0.43}, {"arrows": "to", "from": "preT_basal_insulin", "title": "0.44", "to": "drug_glp1", "width": 0.44}, {"arrows": "to", "from": "preT_basal_insulin", "title": "0.4", "to": "drug_metformin", "width": 0.4}, {"arrows": "to", "from": "preT_basal_insulin", "title": "0.35", "to": "drug_placebo", "width": 0.35}, {"arrows": "to", "from": "preT_basal_insulin", "title": "0.42", "to": "drug_prandial_insulin", "width": 0.42}, {"arrows": "to", "from": "preT_basal_insulin", "title": "0.37", "to": "drug_sglt2", "width": 0.37}, {"arrows": "to", "from": "preT_basal_insulin", "title": "0.43", "to": "drug_su", "width": 0.43}, {"arrows": "to", "from": "preT_basal_insulin", "title": "0.33", "to": "drug_tzd", "width": 0.33}, {"arrows": "to", "from": "preT_basal_insulin", "title": "0.34", "to": "post_bmi", "width": 0.34}, {"arrows": "to", "from": "preT_basal_insulin", "title": "0.41", "to": "post_cholesterol", "width": 0.41}, {"arrows": "to", "from": "preT_basal_insulin", "title": "1.96", "to": "post_creatinine", "width": 1.96}, {"arrows": "to", "from": "preT_basal_insulin", "title": "1.54", "to": "post_dbp", "width": 1.54}, {"arrows": "to", "from": "preT_basal_insulin", "title": "2.25", "to": "post_sbp", "width": 2.25}, {"arrows": "to", "from": "preT_basal_insulin", "title": "1.76", "to": "post_uac", "width": 1.76}, {"arrows": "to", "from": "preT_basal_insulin", "title": "3.11", "to": "post_hba1c", "width": 3.11}, {"arrows": "to", "from": "preT_basal_insulin", "title": "1.89", "to": "post_egfr", "width": 1.89}, {"arrows": "to", "from": "preT_bd_insulin", "title": "0.31", "to": "drug_basal_insulin", "width": 0.31}, {"arrows": "to", "from": "preT_bd_insulin", "title": "0.39", "to": "drug_bd_insulin", "width": 0.39}, {"arrows": "to", "from": "preT_bd_insulin", "title": "0.39", "to": "drug_dpp4", "width": 0.39}, {"arrows": "to", "from": "preT_bd_insulin", "title": "0.37", "to": "drug_glp1", "width": 0.37}, {"arrows": "to", "from": "preT_bd_insulin", "title": "0.36", "to": "drug_metformin", "width": 0.36}, {"arrows": "to", "from": "preT_bd_insulin", "title": "0.35", "to": "drug_placebo", "width": 0.35}, {"arrows": "to", "from": "preT_bd_insulin", "title": "0.38", "to": "drug_prandial_insulin", "width": 0.38}, {"arrows": "to", "from": "preT_bd_insulin", "title": "0.37", "to": "drug_sglt2", "width": 0.37}, {"arrows": "to", "from": "preT_bd_insulin", "title": "0.38", "to": "drug_su", "width": 0.38}, {"arrows": "to", "from": "preT_bd_insulin", "title": "0.39", "to": "drug_tzd", "width": 0.39}, {"arrows": "to", "from": "preT_bd_insulin", "title": "0.45", "to": "post_bmi", "width": 0.45}, {"arrows": "to", "from": "preT_bd_insulin", "title": "0.38", "to": "post_cholesterol", "width": 0.38}, {"arrows": "to", "from": "preT_bd_insulin", "title": "2.29", "to": "post_creatinine", "width": 2.29}, {"arrows": "to", "from": "preT_bd_insulin", "title": "1.2", "to": "post_dbp", "width": 1.2}, {"arrows": "to", "from": "preT_bd_insulin", "title": "1.94", "to": "post_sbp", "width": 1.94}, {"arrows": "to", "from": "preT_bd_insulin", "title": "3.67", "to": "post_uac", "width": 3.67}, {"arrows": "to", "from": "preT_bd_insulin", "title": "3.65", "to": "post_hba1c", "width": 3.65}, {"arrows": "to", "from": "preT_bd_insulin", "title": "1.1", "to": "post_egfr", "width": 1.1}, {"arrows": "to", "from": "preT_dpp4", "title": "0.35", "to": "drug_basal_insulin", "width": 0.35}, {"arrows": "to", "from": "preT_dpp4", "title": "0.37", "to": "drug_bd_insulin", "width": 0.37}, {"arrows": "to", "from": "preT_dpp4", "title": "0.42", "to": "drug_dpp4", "width": 0.42}, {"arrows": "to", "from": "preT_dpp4", "title": "0.41", "to": "drug_glp1", "width": 0.41}, {"arrows": "to", "from": "preT_dpp4", "title": "0.42", "to": "drug_metformin", "width": 0.42}, {"arrows": "to", "from": "preT_dpp4", "title": "0.35", "to": "drug_placebo", "width": 0.35}, {"arrows": "to", "from": "preT_dpp4", "title": "0.3", "to": "drug_prandial_insulin", "width": 0.3}, {"arrows": "to", "from": "preT_dpp4", "title": "0.45", "to": "drug_sglt2", "width": 0.45}, {"arrows": "to", "from": "preT_dpp4", "title": "0.33", "to": "drug_su", "width": 0.33}, {"arrows": "to", "from": "preT_dpp4", "title": "0.32", "to": "drug_tzd", "width": 0.32}, {"arrows": "to", "from": "preT_dpp4", "title": "0.46", "to": "post_bmi", "width": 0.46}, {"arrows": "to", "from": "preT_dpp4", "title": "0.53", "to": "post_cholesterol", "width": 0.53}, {"arrows": "to", "from": "preT_dpp4", "title": "2.16", "to": "post_creatinine", "width": 2.16}, {"arrows": "to", "from": "preT_dpp4", "title": "2.01", "to": "post_dbp", "width": 2.01}, {"arrows": "to", "from": "preT_dpp4", "title": "2.34", "to": "post_sbp", "width": 2.34}, {"arrows": "to", "from": "preT_dpp4", "title": "3.95", "to": "post_uac", "width": 3.95}, {"arrows": "to", "from": "preT_dpp4", "title": "3.97", "to": "post_hba1c", "width": 3.97}, {"arrows": "to", "from": "preT_dpp4", "title": "1.18", "to": "post_egfr", "width": 1.18}, {"arrows": "to", "from": "preT_glp1", "title": "0.4", "to": "drug_basal_insulin", "width": 0.4}, {"arrows": "to", "from": "preT_glp1", "title": "0.43", "to": "drug_bd_insulin", "width": 0.43}, {"arrows": "to", "from": "preT_glp1", "title": "0.33", "to": "drug_dpp4", "width": 0.33}, {"arrows": "to", "from": "preT_glp1", "title": "0.29", "to": "drug_glp1", "width": 0.29}, {"arrows": "to", "from": "preT_glp1", "title": "0.35", "to": "drug_metformin", "width": 0.35}, {"arrows": "to", "from": "preT_glp1", "title": "0.4", "to": "drug_placebo", "width": 0.4}, {"arrows": "to", "from": "preT_glp1", "title": "0.36", "to": "drug_prandial_insulin", "width": 0.36}, {"arrows": "to", "from": "preT_glp1", "title": "0.44", "to": "drug_sglt2", "width": 0.44}, {"arrows": "to", "from": "preT_glp1", "title": "0.37", "to": "drug_su", "width": 0.37}, {"arrows": "to", "from": "preT_glp1", "title": "0.39", "to": "drug_tzd", "width": 0.39}, {"arrows": "to", "from": "preT_glp1", "title": "0.55", "to": "post_bmi", "width": 0.55}, {"arrows": "to", "from": "preT_glp1", "title": "0.56", "to": "post_cholesterol", "width": 0.56}, {"arrows": "to", "from": "preT_glp1", "title": "2.5", "to": "post_creatinine", "width": 2.5}, {"arrows": "to", "from": "preT_glp1", "title": "1.29", "to": "post_dbp", "width": 1.29}, {"arrows": "to", "from": "preT_glp1", "title": "2.94", "to": "post_sbp", "width": 2.94}, {"arrows": "to", "from": "preT_glp1", "title": "3.28", "to": "post_uac", "width": 3.28}, {"arrows": "to", "from": "preT_glp1", "title": "4.04", "to": "post_hba1c", "width": 4.04}, {"arrows": "to", "from": "preT_glp1", "title": "1.54", "to": "post_egfr", "width": 1.54}, {"arrows": "to", "from": "preT_metformin", "title": "0.39", "to": "drug_basal_insulin", "width": 0.39}, {"arrows": "to", "from": "preT_metformin", "title": "0.43", "to": "drug_bd_insulin", "width": 0.43}, {"arrows": "to", "from": "preT_metformin", "title": "0.4", "to": "drug_dpp4", "width": 0.4}, {"arrows": "to", "from": "preT_metformin", "title": "0.34", "to": "drug_glp1", "width": 0.34}, {"arrows": "to", "from": "preT_metformin", "title": "0.35", "to": "drug_metformin", "width": 0.35}, {"arrows": "to", "from": "preT_metformin", "title": "0.43", "to": "drug_placebo", "width": 0.43}, {"arrows": "to", "from": "preT_metformin", "title": "0.32", "to": "drug_prandial_insulin", "width": 0.32}, {"arrows": "to", "from": "preT_metformin", "title": "0.37", "to": "drug_sglt2", "width": 0.37}, {"arrows": "to", "from": "preT_metformin", "title": "0.41", "to": "drug_su", "width": 0.41}, {"arrows": "to", "from": "preT_metformin", "title": "0.35", "to": "drug_tzd", "width": 0.35}, {"arrows": "to", "from": "preT_metformin", "title": "0.36", "to": "post_bmi", "width": 0.36}, {"arrows": "to", "from": "preT_metformin", "title": "0.55", "to": "post_cholesterol", "width": 0.55}, {"arrows": "to", "from": "preT_metformin", "title": "2.56", "to": "post_creatinine", "width": 2.56}, {"arrows": "to", "from": "preT_metformin", "title": "1.1", "to": "post_dbp", "width": 1.1}, {"arrows": "to", "from": "preT_metformin", "title": "2.78", "to": "post_sbp", "width": 2.78}, {"arrows": "to", "from": "preT_metformin", "title": "5.46", "to": "post_uac", "width": 5.46}, {"arrows": "to", "from": "preT_metformin", "title": "3.76", "to": "post_hba1c", "width": 3.76}, {"arrows": "to", "from": "preT_metformin", "title": "1.27", "to": "post_egfr", "width": 1.27}, {"arrows": "to", "from": "preT_placebo", "title": "0.48", "to": "drug_basal_insulin", "width": 0.48}, {"arrows": "to", "from": "preT_placebo", "title": "0.31", "to": "drug_bd_insulin", "width": 0.31}, {"arrows": "to", "from": "preT_placebo", "title": "0.35", "to": "drug_dpp4", "width": 0.35}, {"arrows": "to", "from": "preT_placebo", "title": "0.26", "to": "drug_glp1", "width": 0.26}, {"arrows": "to", "from": "preT_placebo", "title": "0.37", "to": "drug_metformin", "width": 0.37}, {"arrows": "to", "from": "preT_placebo", "title": "0.35", "to": "drug_placebo", "width": 0.35}, {"arrows": "to", "from": "preT_placebo", "title": "0.37", "to": "drug_prandial_insulin", "width": 0.37}, {"arrows": "to", "from": "preT_placebo", "title": "0.37", "to": "drug_sglt2", "width": 0.37}, {"arrows": "to", "from": "preT_placebo", "title": "0.4", "to": "drug_su", "width": 0.4}, {"arrows": "to", "from": "preT_placebo", "title": "0.42", "to": "drug_tzd", "width": 0.42}, {"arrows": "to", "from": "preT_placebo", "title": "0.43", "to": "post_bmi", "width": 0.43}, {"arrows": "to", "from": "preT_placebo", "title": "0.44", "to": "post_cholesterol", "width": 0.44}, {"arrows": "to", "from": "preT_placebo", "title": "2.19", "to": "post_creatinine", "width": 2.19}, {"arrows": "to", "from": "preT_placebo", "title": "1.64", "to": "post_dbp", "width": 1.64}, {"arrows": "to", "from": "preT_placebo", "title": "2.2", "to": "post_sbp", "width": 2.2}, {"arrows": "to", "from": "preT_placebo", "title": "4.67", "to": "post_uac", "width": 4.67}, {"arrows": "to", "from": "preT_placebo", "title": "2.84", "to": "post_hba1c", "width": 2.84}, {"arrows": "to", "from": "preT_placebo", "title": "1.33", "to": "post_egfr", "width": 1.33}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "0.44", "to": "drug_basal_insulin", "width": 0.44}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "0.38", "to": "drug_bd_insulin", "width": 0.38}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "0.34", "to": "drug_dpp4", "width": 0.34}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "0.37", "to": "drug_glp1", "width": 0.37}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "0.36", "to": "drug_metformin", "width": 0.36}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "0.32", "to": "drug_placebo", "width": 0.32}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "0.37", "to": "drug_prandial_insulin", "width": 0.37}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "0.47", "to": "drug_sglt2", "width": 0.47}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "0.34", "to": "drug_su", "width": 0.34}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "0.44", "to": "drug_tzd", "width": 0.44}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "0.4", "to": "post_bmi", "width": 0.4}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "0.38", "to": "post_cholesterol", "width": 0.38}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "1.56", "to": "post_creatinine", "width": 1.56}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "1.72", "to": "post_dbp", "width": 1.72}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "1.93", "to": "post_sbp", "width": 1.93}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "2.71", "to": "post_uac", "width": 2.71}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "1.91", "to": "post_hba1c", "width": 1.91}, {"arrows": "to", "from": "preT_prandial_insulin", "title": "1.04", "to": "post_egfr", "width": 1.04}, {"arrows": "to", "from": "preT_sglt2", "title": "0.39", "to": "drug_basal_insulin", "width": 0.39}, {"arrows": "to", "from": "preT_sglt2", "title": "0.43", "to": "drug_bd_insulin", "width": 0.43}, {"arrows": "to", "from": "preT_sglt2", "title": "0.35", "to": "drug_dpp4", "width": 0.35}, {"arrows": "to", "from": "preT_sglt2", "title": "0.39", "to": "drug_glp1", "width": 0.39}, {"arrows": "to", "from": "preT_sglt2", "title": "0.3", "to": "drug_metformin", "width": 0.3}, {"arrows": "to", "from": "preT_sglt2", "title": "0.41", "to": "drug_placebo", "width": 0.41}, {"arrows": "to", "from": "preT_sglt2", "title": "0.42", "to": "drug_prandial_insulin", "width": 0.42}, {"arrows": "to", "from": "preT_sglt2", "title": "0.41", "to": "drug_sglt2", "width": 0.41}, {"arrows": "to", "from": "preT_sglt2", "title": "0.33", "to": "drug_su", "width": 0.33}, {"arrows": "to", "from": "preT_sglt2", "title": "0.44", "to": "drug_tzd", "width": 0.44}, {"arrows": "to", "from": "preT_sglt2", "title": "0.45", "to": "post_bmi", "width": 0.45}, {"arrows": "to", "from": "preT_sglt2", "title": "0.58", "to": "post_cholesterol", "width": 0.58}, {"arrows": "to", "from": "preT_sglt2", "title": "1.83", "to": "post_creatinine", "width": 1.83}, {"arrows": "to", "from": "preT_sglt2", "title": "1.38", "to": "post_dbp", "width": 1.38}, {"arrows": "to", "from": "preT_sglt2", "title": "1.58", "to": "post_sbp", "width": 1.58}, {"arrows": "to", "from": "preT_sglt2", "title": "2.87", "to": "post_uac", "width": 2.87}, {"arrows": "to", "from": "preT_sglt2", "title": "3.17", "to": "post_hba1c", "width": 3.17}, {"arrows": "to", "from": "preT_sglt2", "title": "1.47", "to": "post_egfr", "width": 1.47}, {"arrows": "to", "from": "preT_su", "title": "0.37", "to": "drug_basal_insulin", "width": 0.37}, {"arrows": "to", "from": "preT_su", "title": "0.41", "to": "drug_bd_insulin", "width": 0.41}, {"arrows": "to", "from": "preT_su", "title": "0.37", "to": "drug_dpp4", "width": 0.37}, {"arrows": "to", "from": "preT_su", "title": "0.28", "to": "drug_glp1", "width": 0.28}, {"arrows": "to", "from": "preT_su", "title": "0.31", "to": "drug_metformin", "width": 0.31}, {"arrows": "to", "from": "preT_su", "title": "0.39", "to": "drug_placebo", "width": 0.39}, {"arrows": "to", "from": "preT_su", "title": "0.38", "to": "drug_prandial_insulin", "width": 0.38}, {"arrows": "to", "from": "preT_su", "title": "0.4", "to": "drug_sglt2", "width": 0.4}, {"arrows": "to", "from": "preT_su", "title": "0.41", "to": "drug_su", "width": 0.41}, {"arrows": "to", "from": "preT_su", "title": "0.31", "to": "drug_tzd", "width": 0.31}, {"arrows": "to", "from": "preT_su", "title": "0.42", "to": "post_bmi", "width": 0.42}, {"arrows": "to", "from": "preT_su", "title": "0.5", "to": "post_cholesterol", "width": 0.5}, {"arrows": "to", "from": "preT_su", "title": "2.21", "to": "post_creatinine", "width": 2.21}, {"arrows": "to", "from": "preT_su", "title": "1.61", "to": "post_dbp", "width": 1.61}, {"arrows": "to", "from": "preT_su", "title": "1.76", "to": "post_sbp", "width": 1.76}, {"arrows": "to", "from": "preT_su", "title": "3.15", "to": "post_uac", "width": 3.15}, {"arrows": "to", "from": "preT_su", "title": "4.09", "to": "post_hba1c", "width": 4.09}, {"arrows": "to", "from": "preT_su", "title": "1.33", "to": "post_egfr", "width": 1.33}, {"arrows": "to", "from": "preT_tzd", "title": "0.43", "to": "drug_basal_insulin", "width": 0.43}, {"arrows": "to", "from": "preT_tzd", "title": "0.41", "to": "drug_bd_insulin", "width": 0.41}, {"arrows": "to", "from": "preT_tzd", "title": "0.43", "to": "drug_dpp4", "width": 0.43}, {"arrows": "to", "from": "preT_tzd", "title": "0.41", "to": "drug_glp1", "width": 0.41}, {"arrows": "to", "from": "preT_tzd", "title": "0.4", "to": "drug_metformin", "width": 0.4}, {"arrows": "to", "from": "preT_tzd", "title": "0.32", "to": "drug_placebo", "width": 0.32}, {"arrows": "to", "from": "preT_tzd", "title": "0.42", "to": "drug_prandial_insulin", "width": 0.42}, {"arrows": "to", "from": "preT_tzd", "title": "0.38", "to": "drug_sglt2", "width": 0.38}, {"arrows": "to", "from": "preT_tzd", "title": "0.31", "to": "drug_su", "width": 0.31}, {"arrows": "to", "from": "preT_tzd", "title": "0.33", "to": "drug_tzd", "width": 0.33}, {"arrows": "to", "from": "preT_tzd", "title": "0.37", "to": "post_bmi", "width": 0.37}, {"arrows": "to", "from": "preT_tzd", "title": "0.44", "to": "post_cholesterol", "width": 0.44}, {"arrows": "to", "from": "preT_tzd", "title": "2.33", "to": "post_creatinine", "width": 2.33}, {"arrows": "to", "from": "preT_tzd", "title": "1.09", "to": "post_dbp", "width": 1.09}, {"arrows": "to", "from": "preT_tzd", "title": "2.66", "to": "post_sbp", "width": 2.66}, {"arrows": "to", "from": "preT_tzd", "title": "3.17", "to": "post_uac", "width": 3.17}, {"arrows": "to", "from": "preT_tzd", "title": "3.2", "to": "post_hba1c", "width": 3.2}, {"arrows": "to", "from": "preT_tzd", "title": "0.84", "to": "post_egfr", "width": 0.84}, {"arrows": "to", "from": "drug_basal_insulin", "title": "0.48", "to": "post_bmi", "width": 0.48}, {"arrows": "to", "from": "drug_basal_insulin", "title": "0.39", "to": "post_cholesterol", "width": 0.39}, {"arrows": "to", "from": "drug_basal_insulin", "title": "2.43", "to": "post_creatinine", "width": 2.43}, {"arrows": "to", "from": "drug_basal_insulin", "title": "1.48", "to": "post_dbp", "width": 1.48}, {"arrows": "to", "from": "drug_basal_insulin", "title": "2.95", "to": "post_sbp", "width": 2.95}, {"arrows": "to", "from": "drug_basal_insulin", "title": "6.82", "to": "post_uac", "width": 6.82}, {"arrows": "to", "from": "drug_basal_insulin", "title": "2.46", "to": "post_hba1c", "width": 2.46}, {"arrows": "to", "from": "drug_basal_insulin", "title": "1.54", "to": "post_egfr", "width": 1.54}, {"arrows": "to", "from": "drug_bd_insulin", "title": "0.85", "to": "post_bmi", "width": 0.85}, {"arrows": "to", "from": "drug_bd_insulin", "title": "0.33", "to": "post_cholesterol", "width": 0.33}, {"arrows": "to", "from": "drug_bd_insulin", "title": "2.56", "to": "post_creatinine", "width": 2.56}, {"arrows": "to", "from": "drug_bd_insulin", "title": "1.17", "to": "post_dbp", "width": 1.17}, {"arrows": "to", "from": "drug_bd_insulin", "title": "2.17", "to": "post_sbp", "width": 2.17}, {"arrows": "to", "from": "drug_bd_insulin", "title": "5.74", "to": "post_uac", "width": 5.74}, {"arrows": "to", "from": "drug_bd_insulin", "title": "3.12", "to": "post_hba1c", "width": 3.12}, {"arrows": "to", "from": "drug_bd_insulin", "title": "1.34", "to": "post_egfr", "width": 1.34}, {"arrows": "to", "from": "drug_dpp4", "title": "0.45", "to": "post_bmi", "width": 0.45}, {"arrows": "to", "from": "drug_dpp4", "title": "0.49", "to": "post_cholesterol", "width": 0.49}, {"arrows": "to", "from": "drug_dpp4", "title": "1.33", "to": "post_creatinine", "width": 1.33}, {"arrows": "to", "from": "drug_dpp4", "title": "1.42", "to": "post_dbp", "width": 1.42}, {"arrows": "to", "from": "drug_dpp4", "title": "1.54", "to": "post_sbp", "width": 1.54}, {"arrows": "to", "from": "drug_dpp4", "title": "4.97", "to": "post_uac", "width": 4.97}, {"arrows": "to", "from": "drug_dpp4", "title": "2.43", "to": "post_hba1c", "width": 2.43}, {"arrows": "to", "from": "drug_dpp4", "title": "1.59", "to": "post_egfr", "width": 1.59}, {"arrows": "to", "from": "drug_glp1", "title": "0.81", "to": "post_bmi", "width": 0.81}, {"arrows": "to", "from": "drug_glp1", "title": "0.4", "to": "post_cholesterol", "width": 0.4}, {"arrows": "to", "from": "drug_glp1", "title": "1.93", "to": "post_creatinine", "width": 1.93}, {"arrows": "to", "from": "drug_glp1", "title": "1.53", "to": "post_dbp", "width": 1.53}, {"arrows": "to", "from": "drug_glp1", "title": "1.84", "to": "post_sbp", "width": 1.84}, {"arrows": "to", "from": "drug_glp1", "title": "4.51", "to": "post_uac", "width": 4.51}, {"arrows": "to", "from": "drug_glp1", "title": "3.74", "to": "post_hba1c", "width": 3.74}, {"arrows": "to", "from": "drug_glp1", "title": "1.01", "to": "post_egfr", "width": 1.01}, {"arrows": "to", "from": "drug_metformin", "title": "0.45", "to": "post_bmi", "width": 0.45}, {"arrows": "to", "from": "drug_metformin", "title": "0.41", "to": "post_cholesterol", "width": 0.41}, {"arrows": "to", "from": "drug_metformin", "title": "1.57", "to": "post_creatinine", "width": 1.57}, {"arrows": "to", "from": "drug_metformin", "title": "1.31", "to": "post_dbp", "width": 1.31}, {"arrows": "to", "from": "drug_metformin", "title": "1.39", "to": "post_sbp", "width": 1.39}, {"arrows": "to", "from": "drug_metformin", "title": "2.78", "to": "post_uac", "width": 2.78}, {"arrows": "to", "from": "drug_metformin", "title": "4.43", "to": "post_hba1c", "width": 4.43}, {"arrows": "to", "from": "drug_metformin", "title": "1.0", "to": "post_egfr", "width": 1.0}, {"arrows": "to", "from": "drug_placebo", "title": "0.34", "to": "post_bmi", "width": 0.34}, {"arrows": "to", "from": "drug_placebo", "title": "0.32", "to": "post_cholesterol", "width": 0.32}, {"arrows": "to", "from": "drug_placebo", "title": "1.92", "to": "post_creatinine", "width": 1.92}, {"arrows": "to", "from": "drug_placebo", "title": "1.16", "to": "post_dbp", "width": 1.16}, {"arrows": "to", "from": "drug_placebo", "title": "1.7", "to": "post_sbp", "width": 1.7}, {"arrows": "to", "from": "drug_placebo", "title": "2.87", "to": "post_uac", "width": 2.87}, {"arrows": "to", "from": "drug_placebo", "title": "1.45", "to": "post_hba1c", "width": 1.45}, {"arrows": "to", "from": "drug_placebo", "title": "0.71", "to": "post_egfr", "width": 0.71}, {"arrows": "to", "from": "drug_prandial_insulin", "title": "0.29", "to": "post_bmi", "width": 0.29}, {"arrows": "to", "from": "drug_prandial_insulin", "title": "0.29", "to": "post_cholesterol", "width": 0.29}, {"arrows": "to", "from": "drug_prandial_insulin", "title": "2.0", "to": "post_creatinine", "width": 2.0}, {"arrows": "to", "from": "drug_prandial_insulin", "title": "0.8", "to": "post_dbp", "width": 0.8}, {"arrows": "to", "from": "drug_prandial_insulin", "title": "1.19", "to": "post_sbp", "width": 1.19}, {"arrows": "to", "from": "drug_prandial_insulin", "title": "2.61", "to": "post_uac", "width": 2.61}, {"arrows": "to", "from": "drug_prandial_insulin", "title": "3.33", "to": "post_hba1c", "width": 3.33}, {"arrows": "to", "from": "drug_prandial_insulin", "title": "1.42", "to": "post_egfr", "width": 1.42}, {"arrows": "to", "from": "drug_sglt2", "title": "1.03", "to": "post_bmi", "width": 1.03}, {"arrows": "to", "from": "drug_sglt2", "title": "0.73", "to": "post_cholesterol", "width": 0.73}, {"arrows": "to", "from": "drug_sglt2", "title": "2.26", "to": "post_creatinine", "width": 2.26}, {"arrows": "to", "from": "drug_sglt2", "title": "2.14", "to": "post_dbp", "width": 2.14}, {"arrows": "to", "from": "drug_sglt2", "title": "2.33", "to": "post_sbp", "width": 2.33}, {"arrows": "to", "from": "drug_sglt2", "title": "3.37", "to": "post_uac", "width": 3.37}, {"arrows": "to", "from": "drug_sglt2", "title": "4.51", "to": "post_hba1c", "width": 4.51}, {"arrows": "to", "from": "drug_sglt2", "title": "1.13", "to": "post_egfr", "width": 1.13}, {"arrows": "to", "from": "drug_su", "title": "0.64", "to": "post_bmi", "width": 0.64}, {"arrows": "to", "from": "drug_su", "title": "0.47", "to": "post_cholesterol", "width": 0.47}, {"arrows": "to", "from": "drug_su", "title": "2.63", "to": "post_creatinine", "width": 2.63}, {"arrows": "to", "from": "drug_su", "title": "1.83", "to": "post_dbp", "width": 1.83}, {"arrows": "to", "from": "drug_su", "title": "1.82", "to": "post_sbp", "width": 1.82}, {"arrows": "to", "from": "drug_su", "title": "6.93", "to": "post_uac", "width": 6.93}, {"arrows": "to", "from": "drug_su", "title": "4.67", "to": "post_hba1c", "width": 4.67}, {"arrows": "to", "from": "drug_su", "title": "1.4", "to": "post_egfr", "width": 1.4}, {"arrows": "to", "from": "drug_tzd", "title": "0.71", "to": "post_bmi", "width": 0.71}, {"arrows": "to", "from": "drug_tzd", "title": "0.37", "to": "post_cholesterol", "width": 0.37}, {"arrows": "to", "from": "drug_tzd", "title": "1.78", "to": "post_creatinine", "width": 1.78}, {"arrows": "to", "from": "drug_tzd", "title": "0.86", "to": "post_dbp", "width": 0.86}, {"arrows": "to", "from": "drug_tzd", "title": "1.45", "to": "post_sbp", "width": 1.45}, {"arrows": "to", "from": "drug_tzd", "title": "2.68", "to": "post_uac", "width": 2.68}, {"arrows": "to", "from": "drug_tzd", "title": "4.13", "to": "post_hba1c", "width": 4.13}, {"arrows": "to", "from": "drug_tzd", "title": "0.84", "to": "post_egfr", "width": 0.84}, {"arrows": "to", "from": "post_bmi", "title": "0.09", "to": "post_creatinine", "width": 0.09}, {"arrows": "to", "from": "post_bmi", "title": "0.1", "to": "post_dbp", "width": 0.1}, {"arrows": "to", "from": "post_bmi", "title": "0.11", "to": "post_sbp", "width": 0.11}, {"arrows": "to", "from": "post_bmi", "title": "0.08", "to": "post_uac", "width": 0.08}, {"arrows": "to", "from": "post_bmi", "title": "0.12", "to": "post_hba1c", "width": 0.12}, {"arrows": "to", "from": "post_cholesterol", "title": "0.2", "to": "post_dbp", "width": 0.2}, {"arrows": "to", "from": "post_cholesterol", "title": "0.08", "to": "post_sbp", "width": 0.08}, {"arrows": "to", "from": "post_cholesterol", "title": "0.17", "to": "post_uac", "width": 0.17}, {"arrows": "to", "from": "post_cholesterol", "title": "0.5", "to": "post_hba1c", "width": 0.5}, {"arrows": "to", "from": "post_creatinine", "title": "0.08", "to": "post_uac", "width": 0.08}, {"arrows": "to", "from": "post_creatinine", "title": "0.06", "to": "post_hba1c", "width": 0.06}, {"arrows": "to", "from": "post_dbp", "title": "0.24", "to": "post_sbp", "width": 0.24}, {"arrows": "to", "from": "post_dbp", "title": "0.09", "to": "post_uac", "width": 0.09}, {"arrows": "to", "from": "post_dbp", "title": "0.08", "to": "post_hba1c", "width": 0.08}, {"arrows": "to", "from": "post_sbp", "title": "0.12", "to": "post_uac", "width": 0.12}, {"arrows": "to", "from": "post_sbp", "title": "0.07", "to": "post_hba1c", "width": 0.07}, {"arrows": "to", "from": "post_uac", "title": "0.32", "to": "post_hba1c", "width": 0.32}, {"arrows": "to", "from": "post_egfr", "title": "0.73", "to": "post_creatinine", "width": 0.73}, {"arrows": "to", "from": "post_egfr", "title": "0.07", "to": "post_sbp", "width": 0.07}, {"arrows": "to", "from": "post_egfr", "title": "0.08", "to": "post_uac", "width": 0.08}, {"arrows": "to", "from": "post_egfr", "title": "0.08", "to": "post_hba1c", "width": 0.08}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"nodes": {"borderWidth": 1, "borderWidthSelected": 5, "opacity": 1, "size": 20, "font": {"size": 32}}, "edges": {"color": {"inherit": true}, "font": {"size": 16}, "selfReferenceSize": null, "selfReference": {"angle": 0.7853981633974483}, "smooth": false, "width": 100}, "layout": {"hierarchical": {"enabled": false, "levelSeparation": 100, "nodeSpacing": 200, "treeSpacing": 100, "sortMethod": "directed", "shakeTowards": "roots"}}, "interaction": {"hover": true, "multiselect": true, "navigationButtons": true}, "manipulation": {"enabled": true}, "physics": {"hierarchicalRepulsion": {"centralGravity": 10.0, "springLength": 5, "springConstant": 0.01, "damping": 0.9, "nodeDistance": 400, "avoidOverlap": null}, "minVelocity": 10.0, "maxVelocity": 100.0, "timestep": 0.5, "solver": "hierarchicalRepulsion"}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
